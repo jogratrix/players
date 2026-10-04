@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Flag Football Tracker</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#f3f5f7;color:#17202a}.w{max-width:720px;margin:auto;padding:14px 14px 110px}.card{background:#fff;border-radius:16px;padding:14px;margin:10px 0}.row{display:flex;gap:8px}.tab,.btn,.p{border:0;border-radius:12px;font-weight:700}.tab{flex:1;padding:13px;font-size:16px;background:#e6e9ed}.tab.on{background:#175cd3;color:#fff}.btn{padding:11px;background:#e8edf3}.green{background:#16794b;color:#fff}.red{background:#fee4e2;color:#b42318}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.p{background:#fff;border:2px solid #e1e5ea;text-align:left;padding:10px;min-height:68px}.p.sel{background:#dff5e9;border-color:#16794b}.p.rec:not(.sel){background:#fff3cd;border-color:#e0a800}.n{font-size:16px;font-weight:800}.c{font-size:12px;color:#667085;margin-top:5px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.stat{background:#f7f8fa;padding:9px;border-radius:10px}.stat b{display:block;font-size:22px}h1{font-size:22px;margin:4px 0}.head{display:flex;justify-content:space-between;align-items:center}input{width:100%;box-sizing:border-box;margin:3px 0;padding:9px;font-size:16px;border:1px solid #d8dde3;border-radius:9px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:7px 3px;border-bottom:1px solid #e6e9ed;text-align:center}td:first-child,th:first-child{text-align:left}.bottom{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;border-top:1px solid #ddd;padding:9px 12px calc(9px + env(safe-area-inset-bottom))}.bi{max-width:720px;margin:auto;display:grid;grid-template-columns:1fr 2fr 1fr;gap:8px}.big{padding:14px}.msg{text-align:center;font-size:13px;color:#b42318;min-height:18px;margin-top:7px}.note{font-size:12px;color:#667085}
+</style></head><body><div class="w">
+<div class="head"><div><h1>🏈 Play Tracker</h1><div class="note">12 players • 5 on field</div></div><button id="namesBtn" class="btn">Names</button></div>
+<div class="card"><div class="row"><button id="offBtn" class="tab">OFFENSE</button><button id="defBtn" class="tab">DEFENSE</button></div>
+<div class="stats" style="margin-top:10px"><div class="stat"><b id="oc">0</b>Off plays</div><div class="stat"><b id="dc">0</b>Def plays</div><div class="stat"><b id="tc">0</b>Total</div></div></div>
+<div id="namesBox" class="card" hidden><b>Player names</b><div id="inputs" style="margin-top:8px"></div></div>
+<div class="card"><div class="head"><b id="title">Offense lineup</b><span id="count" class="note"></span></div><div id="grid" class="grid" style="margin-top:9px"></div><div id="msg" class="msg"></div><div class="note">Gold = player is among the five with the fewest snaps on this side.</div></div>
+<div class="card"><b>Playing time</b><table style="margin-top:7px"><thead><tr><th>Player</th><th>OFF</th><th>DEF</th><th>Total</th><th>Δ avg</th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="card"><div class="row"><button id="undo2" class="btn">Undo</button><button id="reset" class="btn red">Reset game</button></div></div>
+</div>
+<div class="bottom"><div class="bi"><button id="best" class="btn big">Best 5</button><button id="record" class="btn green big">RECORD PLAY</button><button id="undo" class="btn big">Undo</button></div></div>
+<script>
+(function(){
+var N=12,key="fft_v2",s;
+try{s=JSON.parse(localStorage.getItem(key));}catch(e){}
+if(!s||!s.names){s={names:[],off:[],def:[],op:0,dp:0,side:"OFF",sel:[],hist:[]};for(var i=0;i<N;i++){s.names.push("Player "+(i+1));s.off.push(0);s.def.push(0)}}
+function save(){try{localStorage.setItem(key,JSON.stringify(s))}catch(e){}}
+function el(x){return document.getElementById(x)}
+function counts(){return s.side==="OFF"?s.off:s.def}
+function rec(){var a=[];for(var i=0;i<N;i++)a.push(i);var c=counts();a.sort(function(x,y){return (c[x]-c[y])||((s.off[x]+s.def[x])-(s.off[y]+s.def[y]))||(x-y)});return a.slice(0,5)}
+function setSide(x){s.side=x;s.sel=[];save();draw()}
+function toggle(i){var k=s.sel.indexOf(i);if(k>=0)s.sel.splice(k,1);else if(s.sel.length<5)s.sel.push(i);save();draw()}
+function best(){s.sel=rec();save();draw()}
+function play(){if(s.sel.length!==5){el("msg").textContent="Select exactly 5 players.";return}var a=counts();s.hist.push({side:s.side,p:s.sel.slice()});for(var j=0;j<5;j++)a[s.sel[j]]++;if(s.side==="OFF")s.op++;else s.dp++;s.sel=[];save();draw()}
+function undo(){var h=s.hist.pop();if(!h)return;var a=h.side==="OFF"?s.off:s.def;for(var j=0;j<h.p.length;j++)a[h.p[j]]=Math.max(0,a[h.p[j]]-1);if(h.side==="OFF")s.op=Math.max(0,s.op-1);else s.dp=Math.max(0,s.dp-1);s.side=h.side;s.sel=h.p.slice();save();draw()}
+function reset(){if(!confirm("Reset all play counts? Player names will stay."))return;for(var i=0;i<N;i++){s.off[i]=0;s.def[i]=0}s.op=0;s.dp=0;s.sel=[];s.hist=[];save();draw()}
+function names(){el("namesBox").hidden=!el("namesBox").hidden}
+function esc(t){var d=document.createElement("div");d.textContent=t;return d.innerHTML}
+function buildInputs(){var box=el("inputs");box.innerHTML="";for(let i=0;i<N;i++){var q=document.createElement("input");q.value=s.names[i];q.addEventListener("change",function(){s.names[i]=this.value||("Player "+(i+1));save();draw()});box.appendChild(q)}}
+function draw(){
+el("offBtn").className="tab"+(s.side==="OFF"?" on":"");el("defBtn").className="tab"+(s.side==="DEF"?" on":"");el("title").textContent=s.side==="OFF"?"Offense lineup":"Defense lineup";el("count").textContent=s.sel.length+" / 5 selected";el("oc").textContent=s.op;el("dc").textContent=s.dp;el("tc").textContent=s.op+s.dp;el("msg").textContent="";
+var r=rec(),g=el("grid");g.innerHTML="";
+for(let i=0;i<N;i++){var b=document.createElement("button");b.type="button";b.className="p"+(s.sel.indexOf(i)>=0?" sel":"")+(r.indexOf(i)>=0?" rec":"");b.innerHTML='<div class="n">'+esc(s.names[i])+'</div><div class="c">OFF '+s.off[i]+' • DEF '+s.def[i]+' • TOTAL '+(s.off[i]+s.def[i])+'</div>';b.addEventListener("click",function(){toggle(i)});g.appendChild(b)}
+var total=0,vals=[];for(var i=0;i<N;i++){vals[i]=s.off[i]+s.def[i];total+=vals[i]}var avg=total/N,t=el("tb");t.innerHTML="";
+var ids=[];for(var i=0;i<N;i++)ids.push(i);ids.sort(function(a,b){return vals[a]-vals[b]});
+for(var z=0;z<N;z++){var i=ids[z],d=vals[i]-avg,tr=document.createElement("tr");tr.innerHTML="<td>"+esc(s.names[i])+"</td><td>"+s.off[i]+"</td><td>"+s.def[i]+"</td><td><b>"+vals[i]+"</b></td><td>"+(d>0?"+":"")+d.toFixed(1)+"</td>";t.appendChild(tr)}
+buildInputs()
+}
+el("namesBtn").addEventListener("click",names);el("offBtn").addEventListener("click",function(){setSide("OFF")});el("defBtn").addEventListener("click",function(){setSide("DEF")});el("best").addEventListener("click",best);el("record").addEventListener("click",play);el("undo").addEventListener("click",undo);el("undo2").addEventListener("click",undo);el("reset").addEventListener("click",reset);draw();
+})();
+</script></body></html>
